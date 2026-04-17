@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于 - 我的博客</title>
+    <meta name="description" content="关于我">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <a href="#content" class="skip-link">跳到内容</a>
+    
+    <header class="site-header">
+        <div class="container">
+                <div class="site-branding">
+                <h1 class="site-title"><a href="index.html">新原野</a></h1>
+                <p class="site-description">一片新的原野，一个充满思考与探索的博客</p>
+            </div>
+            <nav class="main-navigation">
+                <button class="menu-toggle" aria-label="菜单" aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-menu">
+                    <li><a href="index.html">首页</a></li>
+                    <li><a href="posts.html">文章列表</a></li>
+                    <li><a href="guestbook.html">留言板</a></li>
+                    <li class="current-menu-item"><a href="about.html">关于</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="content" class="site-content">
+        <div class="container">
+            <div class="content-area">
+                <header class="page-header">
+                    <h1 class="page-title">关于我</h1>
+                </header>
+
+                <div class="page-content">
+                    <section class="about-section">
+                        <h2>你好，我是博主</h2>
+                        <p>欢迎来到「新原野」！这里是我记录学习、分享思考的个人空间。</p>
+                        <p>创建这个博客的初衷是记录自己的学习和成长过程，同时也希望能与志同道合的朋友交流分享。在这里，你可以看到我在专业领域的探索、技术学习的心得，以及对生活的思考。</p>
+                    </section>
+
+                    <section class="about-section">
+                        <h2>关注领域</h2>
+                        <p>目前我主要关注以下几个方向：</p>
+                        <ul>
+                            <li><strong>生物信息学</strong>：利用计算方法解决生物学问题</li>
+                            <li><strong>数据科学</strong>：从数据中发现规律和洞察</li>
+                            <li><strong>学习方法</strong>：如何更高效地学习和成长</li>
+                            <li><strong>生活思考</strong>：记录生活中的感悟和体会</li>
+                        </ul>
+                    </section>
+
+                    <section class="about-section">
+                        <h2>常用工具</h2>
+                        <p>在日常工作和学习中，我主要使用以下工具：</p>
+                        <ul>
+                            <li><strong>文献管理</strong>：Zotero</li>
+                            <li><strong>笔记整理</strong>：Notion</li>
+                            <li><strong>记忆卡片</strong>：Anki</li>
+                            <li><strong>数据分析</strong>：R / Python</li>
+                            <li><strong>版本控制</strong>：Git / GitHub</li>
+                        </ul>
+                    </section>
+
+                    <section class="about-section">
+                        <h2>联系方式</h2>
+                        <p>如果你对我的文章感兴趣，或者有任何问题想要交流，欢迎通过以下方式联系我：</p>
+                        <ul>
+                            <li>GitHub: <a href="https://github.com/djm564331381-png" target="_blank">@djm564331381-png</a></li>
+                            <li>邮箱: 请先在留言板留言，我会回复你</li>
+                        </ul>
+                        <p>也可以在<a href="guestbook.html">留言板</a>给我留言，我会尽快回复。</p>
+                    </section>
+                </div>
+            </div>
+
+            <aside class="widget-area">
+                <div class="widget widget-search">
+                    <h3 class="widget-title">搜索</h3>
+                    <form class="search-form" id="search-form">
+                        <input type="search" class="search-field" placeholder="搜索文章..." id="search-input">
+                        <button type="submit" class="search-submit">搜索</button>
+                    </form>
+                </div>
+
+                <div class="widget widget-categories">
+                    <h3 class="widget-title">分类</h3>
+                    <ul class="category-list" id="category-list">
+                        <!-- 分类列表将通过 JavaScript 动态加载 -->
+                    </ul>
+                </div>
+
+                <div class="widget widget-recent">
+                    <h3 class="widget-title">近期文章</h3>
+                    <ul class="recent-posts" id="recent-posts">
+                        <!-- 近期文章将通过 JavaScript 动态加载 -->
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2026 我的博客. 保留所有权利.</p>
+            <p class="footer-info">使用 GitHub Pages 搭建</p>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="返回顶部">↑</button>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>

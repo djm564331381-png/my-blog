@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>博客管理后台</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f5f5; --surface: #fff; --border: #e0e0e0;
+            --primary: #0073aa; --primary-h: #005177;
+            --danger: #e74c3c; --success: #27ae60; --warn: #f39c12;
+            --text: #333; --text-l: #666; --text-m: #999;
+            --sw: 270px; --hh: 56px;
+            --font: -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+            --mono: "SF Mono",Consolas,"Courier New",monospace;
+            --r: 6px; --sh: 0 1px 4px rgba(0,0,0,.08);
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+        /* ── 顶栏 ── */
+        .topbar{height:var(--hh);background:var(--primary);color:#fff;display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.2);z-index:100}
+        .tb-logo{font-size:1.05rem;font-weight:700}
+        .tb-logo a{color:#fff;text-decoration:none;opacity:.85}
+        .tb-logo a:hover{opacity:1}
+        .tb-sep{width:1px;height:22px;background:rgba(255,255,255,.3)}
+        .tb-sub{font-size:.85rem;opacity:.85}
+        .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+        .gh-status{font-size:.8rem;padding:4px 10px;border-radius:var(--r);background:rgba(255,255,255,.15);cursor:pointer;white-space:nowrap;transition:background .2s}
+        .gh-status:hover{background:rgba(255,255,255,.25)}
+        .gh-status.ok{background:rgba(39,174,96,.4)}
+        .gh-status.err{background:rgba(231,76,60,.4)}
+
+        /* ── 主体 ── */
+        .layout{flex:1;display:flex;overflow:hidden}
+
+        /* ── 左栏 ── */
+        .sidebar{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+        .sb-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+        .sb-head h3{font-size:.78rem;color:var(--text-m);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+        .btn-new{display:inline-flex;align-items:center;gap:3px;padding:5px 11px;background:var(--primary);color:#fff;border:none;border-radius:var(--r);font-size:.78rem;font-weight:600;cursor:pointer;transition:background .2s}
+        .btn-new:hover{background:var(--primary-h)}
+        .post-list{flex:1;overflow-y:auto}
+        .pli{padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative}
+        .pli:hover{background:#f8f9fa}
+        .pli.active{background:#e8f4fd;border-left:3px solid var(--primary)}
+        .pli-title{font-size:.875rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+        .pli-meta{font-size:.72rem;color:var(--text-m);display:flex;gap:6px;align-items:center}
+        .pli-cat{background:#eaf4ff;color:var(--primary);padding:1px 5px;border-radius:3px;font-size:.68rem}
+        .pli-del{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#ccc;cursor:pointer;font-size:.9rem;opacity:0;transition:opacity .15s,color .15s;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:3px}
+        .pli:hover .pli-del{opacity:1}
+        .pli-del:hover{color:var(--danger);background:#fdecea}
+
+        /* ── 编辑区 ── */
+        .editor{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+        /* 工具栏 */
+        .etb{padding:8px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0}
+        .tg{display:flex;gap:1px;padding-right:8px;border-right:1px solid var(--border)}
+        .tg:last-child{border-right:none}
+        .tb{padding:4px 8px;background:none;border:1px solid transparent;border-radius:var(--r);font-size:.78rem;cursor:pointer;color:var(--text-l);transition:all .15s;font-family:var(--mono);min-width:28px;text-align:center}
+        .tb:hover{background:#f0f0f0;border-color:var(--border);color:var(--text)}
+        .view-toggle{margin-left:auto;display:flex;background:var(--bg);border-radius:var(--r);padding:2px}
+        .vb{padding:3px 10px;border:none;background:none;border-radius:4px;font-size:.78rem;cursor:pointer;color:var(--text-l);transition:all .15s}
+        .vb.active{background:var(--surface);color:var(--primary);box-shadow:var(--sh);font-weight:500}
+
+        /* 元信息栏 */
+        .meta-bar{padding:8px 18px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-shrink:0;flex-wrap:wrap}
+        .mi{display:flex;align-items:center;gap:5px}
+        .mi label{font-size:.76rem;color:var(--text-m);white-space:nowrap}
+        .mi input{padding:4px 8px;border:1px solid var(--border);border-radius:var(--r);font-size:.85rem;font-family:var(--font);color:var(--text);background:var(--surface);transition:border-color .15s}
+        .mi input:focus{outline:none;border-color:var(--primary)}
+        #inp-title{flex:1;min-width:180px;font-size:.92rem;font-weight:500}
+        #inp-cat{width:100px}
+        #inp-date{width:130px}
+        #inp-tags{width:160px}
+
+        /* 主编辑区 */
+        .ebody{flex:1;display:flex;overflow:hidden}
+        #ep,#pp{flex:1;overflow-y:auto;padding:20px 24px}
+        #ep{display:flex;flex-direction:column;border-right:1px solid var(--border)}
+        #pp{display:none}
+        .elabel{font-size:.72rem;font-weight:600;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:block}
+        #ta-exc{width:100%;border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:.875rem;font-family:var(--font);line-height:1.7;resize:vertical;min-height:60px;color:var(--text);background:#fafafa;transition:border-color .15s;margin-bottom:10px}
+        #ta-exc:focus{outline:none;border-color:var(--primary);background:#fff}
+        #ta-body{width:100%;flex:1;border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;font-size:.9rem;font-family:var(--mono);line-height:1.75;resize:none;min-height:260px;color:var(--text);background:#fff;transition:border-color .15s;tab-size:4}
+        #ta-body:focus{outline:none;border-color:var(--primary)}
+        .preview-content{max-width:720px;font-size:1.0625rem;line-height:1.9;color:var(--text)}
+        .preview-content h1{font-size:1.875rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+        .preview-content h2{font-size:1.375rem;margin-top:2rem;margin-bottom:.875rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+        .preview-content h3{font-size:1.15rem;margin-top:1.5rem;margin-bottom:.75rem}
+        .preview-content p{margin-bottom:1rem}
+        .preview-content ul,.preview-content ol{padding-left:1.5rem;margin-bottom:1rem}
+        .preview-content li{margin-bottom:.375rem}
+        .preview-content blockquote{border-left:4px solid var(--primary);background:#f0f7ff;padding:.75rem 1.25rem;margin:1rem 0;border-radius:0 var(--r) var(--r) 0}
+        .preview-content blockquote p{margin:0;color:var(--text-l)}
+        .preview-content code{font-family:var(--mono);font-size:.875em;background:#f3f4f6;padding:.15em .4em;border-radius:3px;color:#d63384}
+        .preview-content pre{background:#f6f8fa;border:1px solid var(--border);border-radius:var(--r);padding:1rem;overflow-x:auto;margin-bottom:1rem}
+        .preview-content pre code{background:none;padding:0;color:inherit}
+        .preview-content table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+        .preview-content th,.preview-content td{padding:.5rem .75rem;border:1px solid var(--border)}
+        .preview-content th{background:#f8f9fa;font-weight:600}
+        .preview-content img{max-width:100%;border-radius:var(--r)}
+
+        /* 底栏 */
+        .efoot{padding:8px 18px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+        .wc{font-size:.78rem;color:var(--text-m);margin-right:auto}
+        .ss{font-size:.78rem;color:var(--text-m)}
+        .btn{padding:6px 16px;border:none;border-radius:var(--r);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:4px}
+        .btn-primary{background:var(--primary);color:#fff}
+        .btn-primary:hover{background:var(--primary-h)}
+        .btn-success{background:var(--success);color:#fff}
+        .btn-success:hover{background:#219a52}
+        .btn-success:disabled{background:#aaa;cursor:not-allowed}
+        .btn-outline{background:#fff;color:var(--text);border:1px solid var(--border)}
+        .btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+
+        /* 空状态 */
+        #no-sel{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--text-m)}
+        #no-sel .ico{font-size:2.8rem}
+        #no-sel p{font-size:.875rem}
+
+        /* ── 模态框 ── */
+        .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:1000}
+        .overlay.open{display:flex}
+        .modal{background:var(--surface);border-radius:10px;width:540px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+        .mh h3{font-size:.975rem;font-weight:600}
+        .mc{padding:18px 20px;flex:1;overflow-y:auto}
+        .mf{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+        .mclose{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-m)}
+        .mclose:hover{color:var(--text)}
+
+        /* GitHub 设置表单 */
+        .fg{margin-bottom:14px}
+        .fg label{display:block;margin-bottom:5px;font-size:.85rem;font-weight:500}
+        .fg input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:.875rem;font-family:var(--font)}
+        .fg input:focus{outline:none;border-color:var(--primary)}
+        .fg small{display:block;margin-top:4px;font-size:.76rem;color:var(--text-m);line-height:1.5}
+        .tip{background:#f0f7ff;border-left:3px solid var(--primary);border-radius:0 var(--r) var(--r) 0;padding:10px 14px;font-size:.83rem;color:var(--text-l);margin-bottom:14px;line-height:1.6}
+        .tip a{color:var(--primary)}
+        .tip code{background:#dde;padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:.85em}
+
+        /* 发布进度 */
+        .pub-step{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:.875rem;color:var(--text-l)}
+        .pub-step .dot{width:20px;height:20px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0}
+        .pub-step.done .dot{background:var(--success);color:#fff}
+        .pub-step.running .dot{background:var(--warn);color:#fff;animation:spin .8s linear infinite}
+        .pub-step.fail .dot{background:var(--danger);color:#fff}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* Toast */
+        .toast{position:fixed;bottom:28px;right:28px;padding:9px 18px;border-radius:var(--r);font-size:.85rem;font-weight:500;color:#fff;transform:translateY(16px);opacity:0;transition:all .3s;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+        .toast.show{transform:translateY(0);opacity:1}
+        .toast.success{background:var(--success)}
+        .toast.info{background:var(--primary)}
+        .toast.error{background:var(--danger)}
+
+        ::-webkit-scrollbar{width:5px;height:5px}
+        ::-webkit-scrollbar-thumb{background:#d0d0d0;border-radius:3px}
+    </style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<header class="topbar">
+    <span class="tb-logo"><a href="index.html" target="_blank">新原野</a></span>
+    <div class="tb-sep"></div>
+    <span class="tb-sub">文章管理后台</span>
+    <div class="tb-right">
+        <span class="gh-status" id="gh-status" onclick="openGhSettings()" title="点击配置 GitHub 信息">⚙ GitHub 未配置</span>
+        <button class="btn btn-success" id="pub-btn" onclick="openPublish()" disabled>🚀 发布到网站</button>
+    </div>
+</header>
+
+<!-- 主体 -->
+<div class="layout">
+
+    <!-- 左栏 -->
+    <aside class="sidebar">
+        <div class="sb-head">
+            <h3>文章列表</h3>
+            <button class="btn-new" onclick="newPost()">＋ 新建</button>
+        </div>
+        <div class="post-list" id="post-list"></div>
+    </aside>
+
+    <!-- 编辑区 -->
+    <div class="editor" id="editor">
+        <div id="no-sel">
+            <div class="ico">✏️</div>
+            <p>选择左侧文章开始编辑，或点击「新建」</p>
+        </div>
+
+        <div id="ew" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+            <!-- 工具栏 -->
+            <div class="etb">
+                <div class="tg">
+                    <button class="tb" onclick="ins('**','**')" title="粗体"><b>B</b></button>
+                    <button class="tb" onclick="ins('*','*')" title="斜体"><i>I</i></button>
+                    <button class="tb" onclick="ins('~~','~~')" title="删除线"><s>S</s></button>
+                </div>
+                <div class="tg">
+                    <button class="tb" onclick="insH(2)">H2</button>
+                    <button class="tb" onclick="insH(3)">H3</button>
+                    <button class="tb" onclick="insH(4)">H4</button>
+                </div>
+                <div class="tg">
+                    <button class="tb" onclick="insLine('- ')" title="无序列表">≡</button>
+                    <button class="tb" onclick="insLine('1. ')" title="有序列表">1.</button>
+                    <button class="tb" onclick="insLine('> ')" title="引用">❝</button>
+                    <button class="tb" onclick="insHr()" title="分割线">—</button>
+                </div>
+                <div class="tg">
+                    <button class="tb" onclick="ins('`','`')" title="行内代码">`c`</button>
+                    <button class="tb" onclick="insCode()" title="代码块">```</button>
+                    <button class="tb" onclick="insLink()" title="链接">🔗</button>
+                </div>
+                <div class="view-toggle">
+                    <button class="vb active" id="vb-e" onclick="setView('edit')">编辑</button>
+                    <button class="vb" id="vb-s" onclick="setView('split')">分栏</button>
+                    <button class="vb" id="vb-p" onclick="setView('preview')">预览</button>
+                </div>
+            </div>
+
+            <!-- 元信息 -->
+            <div class="meta-bar">
+                <div class="mi" style="flex:1">
+                    <input type="text" id="inp-title" class="mi" placeholder="文章标题..." oninput="dirty()">
+                </div>
+                <div class="mi">
+                    <label>分类</label>
+                    <input type="text" id="inp-cat" placeholder="杂谈集" oninput="dirty()" list="cat-dl">
+                    <datalist id="cat-dl"></datalist>
+                </div>
+                <div class="mi">
+                    <label>日期</label>
+                    <input type="date" id="inp-date" oninput="dirty()">
+                </div>
+                <div class="mi">
+                    <label>标签</label>
+                    <input type="text" id="inp-tags" placeholder="标签1,标签2" oninput="dirty()">
+                </div>
+            </div>
+
+            <!-- 编辑/预览 -->
+            <div class="ebody">
+                <div id="ep">
+                    <label class="elabel">摘要（首页列表显示）</label>
+                    <textarea id="ta-exc" placeholder="写一段简短摘要..." oninput="dirty()"></textarea>
+                    <label class="elabel">正文（Markdown）</label>
+                    <textarea id="ta-body" placeholder="开始写作...&#10;&#10;支持 Markdown：## 标题  **粗体**  - 列表  > 引用  `代码`" oninput="onBody()" onkeydown="tabKey(event)"></textarea>
+                </div>
+                <div id="pp">
+                    <div class="preview-content" id="pv"></div>
+                </div>
+            </div>
+
+            <!-- 底栏 -->
+            <div class="efoot">
+                <span class="wc" id="wc">0 字</span>
+                <span class="ss" id="ss"></span>
+                <button class="btn btn-outline" onclick="previewInSite()">👁 网站预览</button>
+                <button class="btn btn-primary" onclick="save()">💾 保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GitHub 配置模态框 -->
+<div class="overlay" id="gh-modal">
+    <div class="modal">
+        <div class="mh">
+            <h3>⚙ GitHub 配置</h3>
+            <button class="mclose" onclick="closeM('gh-modal')">✕</button>
+        </div>
+        <div class="mc">
+            <div class="tip">
+                配置后即可在浏览器里直接将文章发布到 GitHub Pages，无需手动提交代码。<br>
+                Token 仅存在你本地浏览器（localStorage），不会上传任何地方。
+            </div>
+            <div class="fg">
+                <label>GitHub 用户名</label>
+                <input type="text" id="gh-user" placeholder="例：djm564331381-png">
+                <small>你的 GitHub 账号名</small>
+            </div>
+            <div class="fg">
+                <label>仓库名称</label>
+                <input type="text" id="gh-repo" placeholder="例：my-blog">
+                <small>博客所在的仓库名（不是完整 URL）</small>
+            </div>
+            <div class="fg">
+                <label>Personal Access Token（PAT）</label>
+                <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+                <small>
+                    前往 <a href="https://github.com/settings/tokens/new" target="_blank">GitHub → Settings → Tokens (classic)</a>，
+                    勾选 <code>repo</code> 权限后生成。Token 只显示一次，请妥善保管。
+                </small>
+            </div>
+            <div class="fg">
+                <label>分支名称</label>
+                <input type="text" id="gh-branch" placeholder="main">
+                <small>GitHub Pages 部署的分支，通常是 <code>main</code></small>
+            </div>
+        </div>
+        <div class="mf">
+            <button class="btn btn-outline" onclick="closeM('gh-modal')">取消</button>
+            <button class="btn btn-primary" onclick="saveGhConfig()">保存配置</button>
+        </div>
+    </div>
+</div>
+
+<!-- 发布模态框 -->
+<div class="overlay" id="pub-modal">
+    <div class="modal">
+        <div class="mh">
+            <h3>🚀 发布到 GitHub Pages</h3>
+            <button class="mclose" onclick="closeM('pub-modal')">✕</button>
+        </div>
+        <div class="mc" id="pub-body">
+            <div class="tip" id="pub-tip">点击「确认发布」后，文章数据将通过 GitHub API 直接推送到你的仓库。<br>GitHub Pages 通常在 1~2 分钟内自动更新。</div>
+            <div id="pub-steps"></div>
+        </div>
+        <div class="mf">
+            <button class="btn btn-outline" id="pub-cancel" onclick="closeM('pub-modal')">取消</button>
+            <button class="btn btn-success" id="pub-go" onclick="doPublish()">确认发布</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  数据层（localStorage）
+// ============================================================
+const SK = 'blog_admin_posts';
+const GH_KEY = 'blog_gh_config';
+
+let posts = (() => {
+    try { return JSON.parse(localStorage.getItem(SK)) || defaultPosts(); }
+    catch(e) { return defaultPosts(); }
+})();
+
+let ghCfg = (() => {
+    try { return JSON.parse(localStorage.getItem(GH_KEY)) || {}; }
+    catch(e) { return {}; }
+})();
+
+function persist() { localStorage.setItem(SK, JSON.stringify(posts)); }
+
+function defaultPosts() {
+    return [{
+        id: 1, title: "开始我的博客之旅",
+        excerpt: "欢迎来到我的博客！这里是我记录生活、分享思考的地方。",
+        content: "## 欢迎\n\n欢迎来到我的博客！\n\n写下你想分享的内容，然后点击右上角「发布到网站」即可上线。",
+        category: "杂谈集", date: today(), tags: ["博客", "随笔"]
+    }];
+}
+
+// ============================================================
+//  状态
+// ============================================================
+let cid = null;   // 当前编辑的文章 id
+let isDirty = false;
+let atimer = null;
+let view = 'edit';
+
+// ============================================================
+//  初始化
+// ============================================================
+function init() {
+    renderList();
+    updateCatDl();
+    refreshGhStatus();
+    if (posts.length > 0) selectPost(posts[0].id);
+}
+
+// ============================================================
+//  文章列表
+// ============================================================
+function renderList() {
+    const el = document.getElementById('post-list');
+    if (!posts.length) {
+        el.innerHTML = '<div style="padding:22px;text-align:center;color:var(--text-m);font-size:.85rem;">暂无文章，点击「新建」开始</div>';
+        return;
+    }
+    el.innerHTML = posts.map(p => `
+        <div class="pli ${p.id === cid ? 'active' : ''}" onclick="selectPost(${p.id})">
+            <div class="pli-title">${p.title || '（无标题）'}</div>
+            <div class="pli-meta">
+                <span class="pli-cat">${p.category || '未分类'}</span>
+                <span>${p.date || ''}</span>
+            </div>
+            <button class="pli-del" onclick="delPost(event,${p.id})" title="删除">✕</button>
+        </div>
+    `).join('');
+}
+
+function selectPost(id) {
+    if (isDirty) autoSave();
+    cid = id;
+    const p = posts.find(x => x.id === id);
+    if (!p) return;
+
+    document.getElementById('no-sel').style.display = 'none';
+    const ew = document.getElementById('ew');
+    ew.style.display = 'flex';
+
+    document.getElementById('inp-title').value  = p.title    || '';
+    document.getElementById('inp-cat').value    = p.category || '';
+    document.getElementById('inp-date').value   = p.date     || today();
+    document.getElementById('inp-tags').value   = (p.tags || []).join(',');
+    document.getElementById('ta-exc').value     = p.excerpt  || '';
+    document.getElementById('ta-body').value    = p.content  || '';
+
+    isDirty = false;
+    setSS('已保存');
+    updateWC();
+    updatePreview();
+    renderList();
+}
+
+function newPost() {
+    if (isDirty) autoSave();
+    const maxId = posts.length ? Math.max(...posts.map(p => p.id)) : 0;
+    const np = { id: maxId + 1, title: '', excerpt: '', content: '', category: '杂谈集', date: today(), tags: [] };
+    posts.unshift(np);
+    persist();
+    renderList();
+    updateCatDl();
+    selectPost(np.id);
+    document.getElementById('inp-title').focus();
+}
+
+function delPost(e, id) {
+    e.stopPropagation();
+    const p = posts.find(x => x.id === id);
+    if (!confirm(`确定删除「${p?.title || '这篇文章'}」吗？`)) return;
+    posts = posts.filter(x => x.id !== id);
+    persist();
+    if (cid === id) {
+        cid = null;
+        document.getElementById('ew').style.display = 'none';
+        document.getElementById('no-sel').style.display = 'flex';
+    }
+    renderList();
+    toast('已删除', 'info');
+}
+
+// ============================================================
+//  编辑功能
+// ============================================================
+function dirty() { isDirty = true; setSS('未保存...'); clearTimeout(atimer); atimer = setTimeout(autoSave, 2000); }
+function onBody() { dirty(); updateWC(); if (view !== 'edit') updatePreview(); }
+
+function autoSave() { if (isDirty && cid) save(true); }
+
+function save(silent = false) {
+    if (!cid) return;
+    const idx = posts.findIndex(p => p.id === cid);
+    if (idx < 0) return;
+    posts[idx] = {
+        ...posts[idx],
+        title:    document.getElementById('inp-title').value.trim() || '（无标题）',
+        excerpt:  document.getElementById('ta-exc').value.trim(),
+        content:  document.getElementById('ta-body').value,
+        category: document.getElementById('inp-cat').value.trim() || '杂谈集',
+        date:     document.getElementById('inp-date').value || today(),
+        tags:     document.getElementById('inp-tags').value.split(',').map(t => t.trim()).filter(Boolean)
+    };
+    persist();
+    isDirty = false;
+    setSS('已保存 ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'}));
+    renderList();
+    updateCatDl();
+    if (!silent) toast('已保存', 'success');
+}
+
+function setSS(t) { document.getElementById('ss').textContent = t; }
+function updateWC() {
+    const n = (document.getElementById('ta-body').value + document.getElementById('ta-exc').value).replace(/\s/g,'').length;
+    document.getElementById('wc').textContent = n + ' 字';
+}
+
+// ── Markdown 工具栏 ────────────────────────
+function ins(b, a) {
+    const ta = document.getElementById('ta-body');
+    const s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s, e) || '内容';
+    ta.value = ta.value.slice(0, s) + b + sel + a + ta.value.slice(e);
+    ta.focus(); ta.selectionStart = s + b.length; ta.selectionEnd = s + b.length + sel.length;
+    onBody();
+}
+function insLine(prefix) {
+    const ta = document.getElementById('ta-body');
+    const s = ta.selectionStart, ls = ta.value.lastIndexOf('\n', s - 1) + 1;
+    ta.value = ta.value.slice(0, ls) + prefix + ta.value.slice(ls);
+    ta.focus(); ta.selectionStart = ta.selectionEnd = s + prefix.length;
+    onBody();
+}
+function insH(n) { insLine('#'.repeat(n) + ' '); }
+function insHr() {
+    const ta = document.getElementById('ta-body'), s = ta.selectionStart, ins2 = '\n\n---\n\n';
+    ta.value = ta.value.slice(0, s) + ins2 + ta.value.slice(s);
+    ta.focus(); ta.selectionStart = ta.selectionEnd = s + ins2.length;
+    onBody();
+}
+function insCode() {
+    const ta = document.getElementById('ta-body'), s = ta.selectionStart, e = ta.selectionEnd;
+    const sel = ta.value.slice(s, e), ins2 = '\n```\n' + (sel || '代码') + '\n```\n';
+    ta.value = ta.value.slice(0, s) + ins2 + ta.value.slice(e);
+    ta.focus(); onBody();
+}
+function insLink() {
+    const url = prompt('链接 URL：', 'https://');
+    if (!url) return;
+    const ta = document.getElementById('ta-body'), s = ta.selectionStart, e = ta.selectionEnd;
+    const sel = ta.value.slice(s, e) || '链接文字';
+    ta.value = ta.value.slice(0, s) + `[${sel}](${url})` + ta.value.slice(e);
+    ta.focus(); onBody();
+}
+function tabKey(ev) {
+    if (ev.key !== 'Tab') return;
+    ev.preventDefault();
+    const ta = ev.target, s = ta.selectionStart;
+    ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = s + 4;
+}
+
+// ── 视图切换 ────────────────────────
+function setView(v) {
+    view = v;
+    ['edit','split','preview'].forEach(x => document.getElementById('vb-' + x[0]).classList.toggle('active', x === v));
+    const ep = document.getElementById('ep'), pp = document.getElementById('pp');
+    if (v === 'edit')    { ep.style.display = 'flex'; pp.style.display = 'none'; }
+    else if (v === 'split') { ep.style.display = 'flex'; pp.style.display = 'block'; updatePreview(); }
+    else                 { ep.style.display = 'none'; pp.style.display = 'block'; updatePreview(); }
+}
+
+function updatePreview() {
+    const title = document.getElementById('inp-title').value;
+    const body  = document.getElementById('ta-body').value;
+    const pv    = document.getElementById('pv');
+    let html = title ? `<h1>${esc(title)}</h1>` : '';
+    html += marked.parse(body || '*（正文为空）*');
+    pv.innerHTML = html;
+    pv.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+}
+
+function previewInSite() {
+    if (isDirty) save(true);
+    window.open('post.html?id=' + cid, '_blank');
+}
+
+// ============================================================
+//  GitHub 配置
+// ============================================================
+function openGhSettings() {
+    document.getElementById('gh-user').value   = ghCfg.user   || '';
+    document.getElementById('gh-repo').value   = ghCfg.repo   || 'my-blog';
+    document.getElementById('gh-token').value  = ghCfg.token  || '';
+    document.getElementById('gh-branch').value = ghCfg.branch || 'main';
+    openM('gh-modal');
+}
+
+function saveGhConfig() {
+    ghCfg = {
+        user:   document.getElementById('gh-user').value.trim(),
+        repo:   document.getElementById('gh-repo').value.trim(),
+        token:  document.getElementById('gh-token').value.trim(),
+        branch: document.getElementById('gh-branch').value.trim() || 'main'
+    };
+    if (!ghCfg.user || !ghCfg.repo || !ghCfg.token) {
+        toast('请填写完整的用户名、仓库名和 Token', 'error'); return;
+    }
+    localStorage.setItem(GH_KEY, JSON.stringify(ghCfg));
+    refreshGhStatus();
+    closeM('gh-modal');
+    toast('配置已保存', 'success');
+}
+
+function refreshGhStatus() {
+    const el = document.getElementById('gh-status');
+    const btn = document.getElementById('pub-btn');
+    if (ghCfg.user && ghCfg.repo && ghCfg.token) {
+        el.textContent = `✓ ${ghCfg.user}/${ghCfg.repo}`;
+        el.classList.remove('err'); el.classList.add('ok');
+        btn.disabled = false;
+    } else {
+        el.textContent = '⚙ GitHub 未配置';
+        el.classList.remove('ok'); el.classList.remove('err');
+        btn.disabled = true;
+    }
+}
+
+// ============================================================
+//  发布流程
+// ============================================================
+const STEPS = [
+    { id: 's1', label: '保存本地草稿' },
+    { id: 's2', label: '获取当前 posts.json 版本信息' },
+    { id: 's3', label: '上传新的 posts.json 到 GitHub' },
+    { id: 's4', label: '等待 GitHub Pages 构建...' }
+];
+
+function openPublish() {
+    if (isDirty) save(true);
+    document.getElementById('pub-tip').style.display = 'block';
+    document.getElementById('pub-steps').innerHTML = '';
+    document.getElementById('pub-go').disabled = false;
+    document.getElementById('pub-go').textContent = '确认发布';
+    document.getElementById('pub-cancel').textContent = '取消';
+    openM('pub-modal');
+}
+
+async function doPublish() {
+    document.getElementById('pub-go').disabled = true;
+    document.getElementById('pub-go').textContent = '发布中...';
+    document.getElementById('pub-tip').style.display = 'none';
+    document.getElementById('pub-cancel').textContent = '关闭';
+
+    const stepsEl = document.getElementById('pub-steps');
+    stepsEl.innerHTML = STEPS.map(s =>
+        `<div class="pub-step" id="${s.id}"><div class="dot">·</div><span>${s.label}</span></div>`
+    ).join('');
+
+    function setStep(id, st, msg) {
+        const el = document.getElementById(id);
+        el.className = 'pub-step ' + st;
+        el.querySelector('.dot').textContent = st === 'done' ? '✓' : st === 'fail' ? '✕' : '↻';
+        if (msg) el.querySelector('span').textContent = msg;
+    }
+
+    try {
+        // Step 1: 保存
+        setStep('s1', 'running');
+        save(true);
+        setStep('s1', 'done');
+
+        // Step 2: 获取现有文件 SHA
+        setStep('s2', 'running');
+        const { user, repo, token, branch } = ghCfg;
+        const apiBase = `https://api.github.com/repos/${user}/${repo}`;
+        const headers = { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github+json' };
+
+        let sha = null;
+        const getRes = await fetch(`${apiBase}/contents/posts.json?ref=${branch}`, { headers });
+        if (getRes.ok) {
+            const data = await getRes.json();
+            sha = data.sha;
+            setStep('s2', 'done', `获取到文件版本 ${sha.slice(0, 7)}`);
+        } else if (getRes.status === 404) {
+            setStep('s2', 'done', '文件不存在，将新建');
+        } else {
+            const err = await getRes.json();
+            throw new Error(err.message || 'API 请求失败');
+        }
+
+        // Step 3: 推送新内容
+        setStep('s3', 'running');
+        // 按日期倒序排列
+        const sortedPosts = [...posts].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(sortedPosts, null, 4))));
+        const body = {
+            message: `📝 更新文章 [${new Date().toLocaleString('zh-CN')}]`,
+            content,
+            branch
+        };
+        if (sha) body.sha = sha;
+
+        const putRes = await fetch(`${apiBase}/contents/posts.json`, {
+            method: 'PUT', headers, body: JSON.stringify(body)
+        });
+
+        if (!putRes.ok) {
+            const err = await putRes.json();
+            throw new Error(err.message || '上传失败');
+        }
+        setStep('s3', 'done', '已成功推送到 GitHub');
+
+        // Step 4: 提示等待
+        setStep('s4', 'running', '通常 1~2 分钟后自动更新');
+        await new Promise(r => setTimeout(r, 1500));
+        setStep('s4', 'done', `完成！访问 https://${user}.github.io/${repo}/ 查看`);
+
+        // 成功提示
+        const link = `https://${user}.github.io/${repo}/`;
+        stepsEl.insertAdjacentHTML('beforeend', `
+            <div style="margin-top:14px;padding:10px 14px;background:#f0fff4;border-left:3px solid var(--success);border-radius:0 var(--r) var(--r) 0;font-size:.875rem;color:var(--text-l)">
+                🎉 发布成功！<a href="${link}" target="_blank" style="color:var(--primary);font-weight:500">${link}</a> 约 1~2 分钟后更新。
+            </div>
+        `);
+
+    } catch(err) {
+        // 找到当前 running 的步骤标记为失败
+        STEPS.forEach(s => {
+            const el = document.getElementById(s.id);
+            if (el && el.classList.contains('running')) setStep(s.id, 'fail', err.message);
+        });
+        stepsEl.insertAdjacentHTML('beforeend', `
+            <div style="margin-top:12px;padding:10px 14px;background:#fff5f5;border-left:3px solid var(--danger);border-radius:0 var(--r) var(--r) 0;font-size:.83rem;color:var(--danger)">
+                ❌ ${err.message}。请检查 Token 是否有 <code>repo</code> 权限，以及用户名/仓库名是否正确。
+            </div>
+        `);
+        document.getElementById('pub-go').disabled = false;
+        document.getElementById('pub-go').textContent = '重试';
+    }
+}
+
+// ============================================================
+//  辅助
+// ============================================================
+function today() { return new Date().toISOString().slice(0, 10); }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function updateCatDl() {
+    const cats = [...new Set(posts.map(p => p.category).filter(Boolean))];
+    document.getElementById('cat-dl').innerHTML = cats.map(c => `<option value="${c}">`).join('');
+}
+function toast(msg, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = `toast ${type} show`;
+    setTimeout(() => el.classList.remove('show'), 2500);
+}
+function openM(id)  { document.getElementById(id).classList.add('open'); }
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+
+// ============================================================
+init();
+</script>
+</body>
+</html>
